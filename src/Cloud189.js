@@ -39,7 +39,6 @@ const doTask = async (cloudClient) => {
   // 超时中断
   await Promise.race([Promise.all(signPromises1), sleep(timeout)]);
   if (personalBonus.length === 0) personalBonus.push(0);
-  result.push(`- 个人签到：+${personalBonus.join(" + ")}M`);
   return result;
 };
 
@@ -47,8 +46,6 @@ if (process.env.TYYS == null || process.env.TYYS == "") {
   logger.error("没有设置TYYS环境变量");
   process.exit(0);
 }
-
-let FAMILY_ID;
 
 let i;
 
