@@ -158,7 +158,8 @@ const main = async () => {
         ).toFixed(2)}G`
       );
     } catch (e) {
-      logger.error(e);
+      // Log only the error message to avoid noisy stack traces
+      logger.error(` - ${e && e.message ? e.message : e}`);
       if (e.code === "ETIMEDOUT") throw e;
     } finally {
       logger.log("");

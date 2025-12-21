@@ -69,13 +69,13 @@ class CloudAuthClient {
     async getLoginForm() {
         const res = await this.request
             .get(`${const_1.WEB_URL}/api/portal/unifyLoginForPC.action`, {
-            searchParams: {
-                appId: const_1.AppID,
-                clientType: const_1.ClientType,
-                returnURL: const_1.ReturnURL,
-                timeStamp: Date.now()
-            }
-        })
+                searchParams: {
+                    appId: const_1.AppID,
+                    clientType: const_1.ClientType,
+                    returnURL: const_1.ReturnURL,
+                    timeStamp: Date.now()
+                }
+            })
             .text();
         if (res) {
             const captchaToken = res.match(`'captchaToken' value='(.+?)'`)[1];
@@ -90,8 +90,8 @@ class CloudAuthClient {
         const params = Object.assign(Object.assign({ appId: const_1.AppID }, (0, const_1.clientSuffix)()), param);
         const res = await this.request
             .post(`${const_1.API_URL}/getSessionForPC.action`, {
-            searchParams: params
-        })
+                searchParams: params
+            })
             .json();
         return res;
     }
@@ -100,35 +100,29 @@ class CloudAuthClient {
      * */
     async loginByPassword(username, password) {
         log_1.log.debug('loginByPassword...');
-        try {
-            const res = await Promise.all([
-                //1.获取公钥
-                this.getEncrypt(),
-                //2.获取登录参数
-                this.getLoginForm()
-            ]);
-            const encrypt = res[0].data;
-            const appConf = res[1];
-            const data = __classPrivateFieldGet(this, _CloudAuthClient_builLoginForm, "f").call(this, encrypt, appConf, username, password);
-            const loginRes = await this.request
-                .post(`${const_1.AUTH_URL}/api/logbox/oauth2/loginSubmit.do`, {
-                headers: {
-                    Referer: const_1.AUTH_URL,
-                    lt: appConf.lt,
-                    REQID: appConf.reqId
-                },
-                form: data
-            })
-                .json();
-            if (loginRes.result !== 0) {
-                throw new Error(loginRes.msg);
-            }
-            return await this.getSessionForPC({ redirectURL: loginRes.toUrl });
+        const res = await Promise.all([
+            //1.获取公钥
+            this.getEncrypt(),
+            //2.获取登录参数
+            this.getLoginForm()
+        ]);
+        const encrypt = res[0].data;
+        const appConf = res[1];
+        const data = __classPrivateFieldGet(this, _CloudAuthClient_builLoginForm, "f").call(this, encrypt, appConf, username, password);
+        const loginRes = await this.request
+            .post(`${const_1.AUTH_URL}/api/logbox/oauth2/loginSubmit.do`, {
+            headers: {
+                Referer: const_1.AUTH_URL,
+                lt: appConf.lt,
+                REQID: appConf.reqId
+            },
+            form: data
+        })
+            .json();
+        if (loginRes.result !== 0) {
+            throw new Error(loginRes.msg);
         }
-        catch (e) {
-            log_1.log.error(e);
-            throw e;
-        }
+        return await this.getSessionForPC({ redirectURL: loginRes.toUrl });
     }
     /**
      * token登录
@@ -143,13 +137,13 @@ class CloudAuthClient {
     refreshToken(refreshToken) {
         return this.request
             .post(`${const_1.AUTH_URL}/api/oauth2/refreshToken.do`, {
-            form: {
-                clientId: const_1.AppID,
-                refreshToken,
-                grantType: 'refresh_token',
-                format: 'json'
-            }
-        })
+                form: {
+                    clientId: const_1.AppID,
+                    refreshToken,
+                    grantType: 'refresh_token',
+                    format: 'json'
+                }
+            })
             .json();
     }
 }
@@ -247,7 +241,6 @@ class CloudClient {
                 return await this.authClient.loginByAccessToken(accessToken);
             }
             catch (e) {
-                log_1.log.error(e);
             }
         }
         const refreshToken = await this.tokenStore.getRefreshToken();
@@ -258,23 +251,16 @@ class CloudClient {
                 return await this.authClient.loginByAccessToken(refreshTokenSession.accessToken);
             }
             catch (e) {
-                log_1.log.error(e);
             }
         }
         if (this.username && this.password) {
-            try {
-                const loginToken = await this.authClient.loginByPassword(this.username, this.password);
-                await this.tokenStore.update({
-                    accessToken: loginToken.accessToken,
-                    refreshToken: loginToken.refreshToken
-                });
-                return loginToken;
-            }
-            catch (e) {
-                log_1.log.error(e);
-            }
+            const loginToken = await this.authClient.loginByPassword(this.username, this.password);
+            await this.tokenStore.update({
+                accessToken: loginToken.accessToken,
+                refreshToken: loginToken.refreshToken
+            });
+            return loginToken;
         }
-        throw new Error('Can not get session.');
     }
     async getSessionKey() {
         if (!this.session.sessionKey) {
@@ -299,8 +285,8 @@ class CloudClient {
     getUserSizeInfo() {
         return this.request
             .get(`${const_1.WEB_URL}/api/portal/getUserSizeInfo.action`, {
-            headers: { Accept: 'application/json;charset=UTF-8' }
-        })
+                headers: { Accept: 'application/json;charset=UTF-8' }
+            })
             .json();
     }
     /**
