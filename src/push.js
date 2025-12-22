@@ -57,10 +57,9 @@ async function sendNotify(title, message, options = {}) {
   const webhook = resolveWebhook();
   const msgType = (options.msgType || process.env.DINGTALK_MSGTYPE || "markdown").toLowerCase();
   const payload = buildPayload(title, message, msgType);
-  try {
-    await got.post(webhook, { json: payload, responseType: "json" });
-  } catch (err) {
-    console.log("DingTalk push failed", err.message || err);
+  a = await got.post(webhook, { json: payload, responseType: "json" });
+  if (a.body.errmsg != 'ok') {
+    throw new Error("DingTalk push fail response: " + a.body.errmsg);
   }
 }
 
@@ -74,12 +73,11 @@ module.exports = {
 
 // Allow direct execution: node push.js "Title" "Message body"
 if (require.main === module) {
-  const [,, cliTitle, ...rest] = process.argv;
-  const body = rest.join(" ");
-  sendNotify(cliTitle || "test push", body || "Hello from push.js").then(() => {
-    console.log("DingTalk push sent");
+  const [, , cliTitle, ...rest] = process.argv;
+  let body = rest.join(" ");
+  sendNotify(cliTitle || "test push", body || "test push --by zhlhlf").then(() => {
+    console.log("DingTalk push sent successfully");
   }).catch(err => {
-    console.error("DingTalk push failed", err.message || err);
-    process.exit(1);
+    console.error(err.message || err);
   });
 }
