@@ -84,7 +84,7 @@ const main = async () => {
 
     cloudClientMap.set(userName, cloudClient);
     try {
-      logger.log(`### ${i / 2 + 1}. ${userNameInfo}`);
+      logger.log(`#### ${i / 2 + 1}. ${userNameInfo}`);
 
       let {
         cloudCapacityInfo: cloudCapacityInfo0,
