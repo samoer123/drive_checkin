@@ -35,7 +35,6 @@ const doTask = async (cloudClient) => {
   } catch (e) {}
 
   if (personalBonus.length === 0) personalBonus.push(0);
-  result.push(`- 个人签到：+${personalBonus.join(" + ")}M`);
   return result;
 };
 
@@ -84,7 +83,6 @@ const main = async () => {
 
     cloudClientMap.set(userName, cloudClient);
     try {
-      logger.log(`#### ${i / 2 + 1}. ${userNameInfo}`);
 
       let {
         cloudCapacityInfo: cloudCapacityInfo0,
@@ -117,7 +115,7 @@ const main = async () => {
       ).toFixed(2);
 
       logger.log(
-        `- 容量：个人 ${personalTotalG}G ( +${personalDeltaM}M ) | 家庭 ${familyTotalG}G`
+        ` - ${i / 2 + 1}.${userNameInfo} 容量：个人 ${personalTotalG}G ( +${personalDeltaM}M ) | 家庭 ${familyTotalG}G`
       );
     } catch (e) {
       // Log only the error message to avoid noisy stack traces
