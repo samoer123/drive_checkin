@@ -100,7 +100,7 @@ const main = async () => {
         (cloudCapacityInfo2.totalSize - cloudCapacityInfo0.totalSize) /
         1024 /
         1024
-      ).toFixed(2);
+      ).toFixed(0);
       const personalTotalG = (
         cloudCapacityInfo2.totalSize /
         1024 /
@@ -115,7 +115,7 @@ const main = async () => {
       ).toFixed(2);
 
       logger.log(
-        ` - ${i / 2 + 1}.${userNameInfo} 容量：个人 ${personalTotalG}G ( +${personalDeltaM}M ) | 家庭 ${familyTotalG}G`
+        ` - ${i / 2 + 1}.${userNameInfo} 个人 ${personalTotalG}G ( +${personalDeltaM}M ) | 家庭 ${familyTotalG}G`
       );
     } catch (e) {
       // Log only the error message to avoid noisy stack traces
