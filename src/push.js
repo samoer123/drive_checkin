@@ -53,7 +53,44 @@ function buildPayload(title, message, msgType) {
   };
 }
 
+async function sendCustomPush(title, message) {
+  const pushUrl = process.env.PUSH_URL;
+  const pushKey = process.env.PUSH_KEY;
+  
+  if (!pushKey) {
+    throw new Error("PUSH_KEY environment variable is required for custom push");
+  }
+  
+  const body = title ? `${title}\n${message}` : message;
+  const payload = {
+    token: pushKey,
+    body: body || "",
+    format: "markdown"
+  };
+  
+  const response = await got.post(pushUrl, {
+    json: payload,
+    responseType: "json"
+  });
+  
+  // Check if push was successful (adjust based on actual API response)
+  if (response.statusCode !== 200) {
+    throw new Error(`Custom push failed with status: ${response.statusCode}`);
+  }
+  
+  return response.body;
+}
+
 async function sendNotify(title, message, options = {}) {
+  // Check if custom push is configured
+  const pushKey = process.env.PUSH_KEY;
+  
+  if (pushKey) {
+    // Use custom push service
+    return await sendCustomPush(title, message);
+  }
+  
+  // Fall back to DingTalk
   const webhook = resolveWebhook();
   const msgType = (options.msgType || process.env.DINGTALK_MSGTYPE || "markdown").toLowerCase();
   const payload = buildPayload(title, message, msgType);
