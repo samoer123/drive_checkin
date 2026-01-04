@@ -4,10 +4,11 @@ const { sendNotify } = require("./push");
 const { CloudClient, FileTokenStore } = require("../sdk/index");
 const fs = require("fs");
 const path = require("path");
+const pLimit = require('p-limit');
 
 let clients = new Map();
-let good = new Set();
-let bad = new Set();
+let good = [];
+let bad = [];
 let outputLogs = []; // 记录所有输出
 
 const getCloudClient = async (userName, password) => {
@@ -29,14 +30,13 @@ const getCloudClient = async (userName, password) => {
   return c;
 };
 
-const createToken = () => {
-  folderPath = "./.token";
+const create = (a) => {
+  folderPath = a;
   if (!fs.existsSync(folderPath)) {
     fs.mkdirSync(folderPath, { recursive: true });
   } else {
   }
 };
-
 
 const set2str = (set) => {
   let data = Array.from(set);
@@ -48,38 +48,71 @@ const logOutput = (message) => {
   console.log(message);
 }
 
+const processUser = async (userName, password, index, totalUsers) => {
+  try {
+    let c = await getCloudClient(userName, password);
+    let space = await c.getUserSizeInfo();
+    await c.userSign();
+    let h = `${(index / 2) + 1}/${totalUsers}.`
+    let msg = `${h.padEnd(10, ' ')} ${userName}  ${(space.cloudCapacityInfo.usedSize / 1024 / 1024 / 1024).toFixed(2)}G / ${(space.cloudCapacityInfo.totalSize / 1024 / 1024 / 1024).toFixed(2)}G -- ${(space.familyCapacityInfo.usedSize / 1024 / 1024 / 1024).toFixed(2)}G / ${(space.familyCapacityInfo.totalSize / 1024 / 1024 / 1024).toFixed(2)}G`
+    logOutput(msg)
+    good.push({
+      userName,
+      password,
+      cloudSize: space.cloudCapacityInfo.totalSize,
+      familySize: space.familyCapacityInfo.totalSize,
+      cloudUsed: space.cloudCapacityInfo.usedSize,
+      familyUsed: space.familyCapacityInfo.usedSize,
+      msg
+    });
+  } catch (e) {
+    let errMsg = `${userName}  --  ${e.message}`
+    logOutput(errMsg)
+    bad.push({
+      userName,
+      password,
+      error: e.message
+    });
+  }
+};
+
 const main = async () => {
-  createToken();
+  create(".token");
+  create("out");
 
   let jer = fs.readFileSync("tyys.txt", "utf8").trim().split(/[\n\t\r ]+/);;
+  let totalUsers = Math.floor(jer.length / 2);
+  const limit = pLimit(4);
+  const tasks = [];
   for (let i = 0; i < jer.length - 1; i += 2) {
     const [userName, password] = jer.slice(i, i + 2);
-    try {
-      let c = await getCloudClient(userName, password)
-      let space = await c.getUserSizeInfo();
-      await c.userSign(),
-        h = `${(i / 2) + 1}/${Math.floor(jer.length / 2)}.`
-      let msg = `${h.padEnd(10, ' ')} ${userName}  ${(space.cloudCapacityInfo.totalSize / 1024 / 1024 / 1024).toFixed(2)}G -- ${(space.familyCapacityInfo.totalSize / 1024 / 1024 / 1024).toFixed(2)}G`
-      logOutput(msg)
-      good.add(`${userName.padEnd(12, ' ')}  ${password.padEnd(25, ' ')} ${(space.cloudCapacityInfo.totalSize / 1024 / 1024 / 1024).toFixed(2)}G -- ${(space.familyCapacityInfo.totalSize / 1024 / 1024 / 1024).toFixed(2)}G`)
-    } catch (e) {
-      let errMsg = `${userName}  --  ${e.message}`
-      logOutput(errMsg)
-      bad.add(`${userName} \t ${password}`)
-    }
+    tasks.push(limit(() => processUser(userName, password, i, totalUsers)));
   }
+  await Promise.all(tasks);
+
+  // 排序 good 数组：先按 cloudSize 降序，再按 familySize 降序
+  good.sort((a, b) => {
+    if (a.cloudSize !== b.cloudSize) {
+      return b.cloudSize - a.cloudSize;
+    } else {
+      return b.familySize - a.familySize;
+    }
+  });
+
+  const goodStr = good.map(item => `${item.userName.padEnd(12, ' ')}  ${item.password.padEnd(25, ' ')} ${(item.cloudUsed / 1024 / 1024 / 1024).toFixed(2)}G / ${(item.cloudSize / 1024 / 1024 / 1024).toFixed(2)}G -- ${(item.familyUsed / 1024 / 1024 / 1024).toFixed(2)}G / ${(item.familySize / 1024 / 1024 / 1024).toFixed(2)}G`).join('\n');
+  const badStr = bad.map(item => `${item.userName} \t ${item.password}`).join('\n');
 
   try {
-    fs.writeFileSync("good.txt", set2str(good), "utf8"); // 写入文件，指定编码为 utf8
-    fs.writeFileSync("bad.txt", set2str(bad), "utf8"); // 写入文件，指定编码为 utf8
+    fs.writeFileSync("out/good.txt", goodStr, "utf8"); // 写入文件，指定编码为 utf8
+    fs.writeFileSync("out/bad.txt", badStr, "utf8"); // 写入文件，指定编码为 utf8
 
     // 准备推送内容 - markdown 格式
     const summary = `## 检查完成
 
 | 状态 | 数量 |
 |------|------|
-| ✅ 成功 | ${good.size} |
-| ❌ 失败 | ${bad.size} |`;
+| ✅ 成功 | ${good.length} |
+| ❌ 失败 | ${bad.length} |`;
     
     const detailedLogs = `### 详细日志\n\`\`\`\n${outputLogs.join("\n")}\n\`\`\``;
     const pushMessage = `${summary}\n\n${detailedLogs}`;
